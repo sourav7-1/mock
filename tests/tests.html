@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Escape – Automated Test Runner</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --green: #059669;
+      --green-light: #ecfdf5;
+      --red: #dc2626;
+      --red-light: #fef2f2;
+      --blue: #2563eb;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 30px 20px;
+    }
+    .test-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .test-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--border);
+    }
+    .test-title { font-size: 1.5rem; font-weight: 700; color: var(--text); }
+    .test-subtitle { font-size: 0.875rem; color: var(--muted); margin-top: 4px; }
+    .back-link {
+      color: var(--blue);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.875rem;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--card-bg);
+    }
+    .back-link:hover { background: #eff6ff; }
+    .summary-card {
+      display: flex;
+      gap: 20px;
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .summary-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .summary-num { font-size: 1.5rem; font-weight: 700; }
+    .summary-label { font-size: 0.75rem; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+    .num-pass { color: var(--green); }
+    .num-fail { color: var(--red); }
+    .num-total { color: var(--blue); }
+
+    .suite-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 20px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .suite-header {
+      background-color: #f1f5f9;
+      padding: 12px 18px;
+      font-weight: 700;
+      font-size: 1rem;
+      border-bottom: 1px solid var(--border);
+      color: #1e293b;
+    }
+    .test-list { list-style: none; }
+    .test-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+    .test-item:last-child { border-bottom: none; }
+    .test-name { font-weight: 500; color: #334155; }
+    .badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-pass { background-color: var(--green-light); color: var(--green); }
+    .badge-fail { background-color: var(--red-light); color: var(--red); }
+    .error-details {
+      margin-top: 6px;
+      padding: 8px 12px;
+      background: var(--red-light);
+      border-left: 3px solid var(--red);
+      font-family: monospace;
+      font-size: 0.8125rem;
+      color: var(--red);
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <header class="test-header">
+      <div>
+        <h1 class="test-title">Smart Escape Test Runner</h1>
+        <p class="test-subtitle">Automated unit and integration tests for evacuation routing & building validation</p>
+      </div>
+      <a href="../index.html" class="back-link">← Back to Simulator</a>
+    </header>
+
+    <div class="summary-card">
+      <div class="summary-item">
+        <span id="numTotal" class="summary-num num-total">–</span>
+        <span class="summary-label">Total Tests</span>
+      </div>
+      <div class="summary-item">
+        <span id="numPass" class="summary-num num-pass">–</span>
+        <span class="summary-label">Passed</span>
+      </div>
+      <div class="summary-item">
+        <span id="numFail" class="summary-num num-fail">–</span>
+        <span class="summary-label">Failed</span>
+      </div>
+    </div>
+
+    <div id="suitesContainer">
+      <p style="padding: 20px; text-align: center; color: var(--muted);">Running test suites...</p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { registerTests } from "./tests.js";
+
+    async function run() {
+      const runner = registerTests();
+      const results = await runner.runAll();
+
+      const numTotal = document.getElementById("numTotal");
+      const numPass = document.getElementById("numPass");
+      const numFail = document.getElementById("numFail");
+      const container = document.getElementById("suitesContainer");
+
+      const passed = results.filter(r => r.passed).length;
+      const failed = results.filter(r => !r.passed).length;
+
+      numTotal.textContent = results.length;
+      numPass.textContent = passed;
+      numFail.textContent = failed;
+
+      // Group by suite
+      const suites = {};
+      results.forEach(r => {
+        if (!suites[r.suite]) suites[r.suite] = [];
+        suites[r.suite].push(r);
+      });
+
+      container.innerHTML = "";
+      for (const [suiteName, tests] of Object.entries(suites)) {
+        const suiteEl = document.createElement("div");
+        suiteEl.className = "suite-card";
+
+        const suiteHeader = document.createElement("div");
+        suiteHeader.className = "suite-header";
+        suiteHeader.textContent = suiteName;
+        suiteEl.appendChild(suiteHeader);
+
+        const list = document.createElement("ul");
+        list.className = "test-list";
+
+        tests.forEach(t => {
+          const li = document.createElement("li");
+          li.className = "test-item";
+
+          const nameDiv = document.createElement("div");
+          nameDiv.className = "test-name";
+          nameDiv.textContent = t.name;
+
+          if (!t.passed && t.error) {
+            const errDiv = document.createElement("div");
+            errDiv.className = "error-details";
+            errDiv.textContent = t.error;
+            nameDiv.appendChild(errDiv);
+          }
+
+          const badge = document.createElement("span");
+          badge.className = t.passed ? "badge badge-pass" : "badge badge-fail";
+          badge.textContent = t.passed ? "PASS" : "FAIL";
+
+          li.appendChild(nameDiv);
+          li.appendChild(badge);
+          list.appendChild(li);
+        });
+
+        suiteEl.appendChild(list);
+        container.appendChild(suiteEl);
+      }
+    }
+
+    run();
+  </script>
+</body>
+</html>
