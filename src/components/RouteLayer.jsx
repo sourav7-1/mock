@@ -3,7 +3,7 @@
  * Continuous smoothed SVG route path, ghost route diff, and hover preview.
  */
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import { generateSmoothRoutePath } from "../core/graph.js";
 import Walker from "./Walker.jsx";
 
@@ -23,33 +23,40 @@ export default function RouteLayer({
 }) {
   const internalPathRef = useRef(null);
   const pathRef = externalPathRef || internalPathRef;
-  const [pathD, setPathD] = useState("");
-  const [ghostD, setGhostD] = useState("");
-  const [hoverD, setHoverD] = useState("");
-  const [showGhost, setShowGhost] = useState(false);
 
   // Check reduced motion preference
   const prefersReducedMotion =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // Build active route path
-  useEffect(() => {
-    if (!graph || !route || route.status !== "ok" || !route.path) {
-      setPathD("");
-      return;
+  // Synchronously compute active route path
+  const pathD = useMemo(() => {
+    if (!graph?.nodes || !route?.path || route.status !== "ok" || route.path.length < 2) {
+      return "";
     }
-
     const nodeMap = new Map();
     graph.nodes.forEach((n) => nodeMap.set(n.id, n));
     const points = route.path.map((id) => nodeMap.get(id)).filter(Boolean);
-
-    setPathD(generateSmoothRoutePath(points, 12));
+    return generateSmoothRoutePath(points, 12);
   }, [graph, route]);
 
-  // Build ghost route on route change
+  // Synchronously compute hover preview route
+  const hoverD = useMemo(() => {
+    if (!graph?.nodes || !hoverPreview?.path || hoverPreview.status !== "ok" || hoverPreview.path.length < 2) {
+      return "";
+    }
+    const nodeMap = new Map();
+    graph.nodes.forEach((n) => nodeMap.set(n.id, n));
+    const points = hoverPreview.path.map((id) => nodeMap.get(id)).filter(Boolean);
+    return generateSmoothRoutePath(points, 12);
+  }, [graph, hoverPreview]);
+
+  // Ghost route diff (fades out after 1.2s)
+  const [ghostD, setGhostD] = useState("");
+  const [showGhost, setShowGhost] = useState(false);
+
   useEffect(() => {
-    if (!graph || !previousRoute || previousRoute.status !== "ok" || !previousRoute.path) {
+    if (!graph || !previousRoute || previousRoute.status !== "ok" || !previousRoute.path || previousRoute.path.length < 2) {
       return;
     }
 
@@ -67,21 +74,7 @@ export default function RouteLayer({
     return () => clearTimeout(timer);
   }, [graph, previousRoute]);
 
-  // Build hover preview route
-  useEffect(() => {
-    if (!graph || !hoverPreview || hoverPreview.status !== "ok" || !hoverPreview.path) {
-      setHoverD("");
-      return;
-    }
-
-    const nodeMap = new Map();
-    graph.nodes.forEach((n) => nodeMap.set(n.id, n));
-    const points = hoverPreview.path.map((id) => nodeMap.get(id)).filter(Boolean);
-
-    setHoverD(generateSmoothRoutePath(points, 12));
-  }, [graph, hoverPreview]);
-
-  const hasRoute = route?.status === "ok" && pathD;
+  const hasRoute = route?.status === "ok" && Boolean(pathD);
 
   return (
     <g className="route-layer-group" pointerEvents="none">
