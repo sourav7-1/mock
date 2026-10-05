@@ -1,0 +1,59 @@
+/* src/styles/tokens.css */
+:root {
+  /* DARK THEME (Night Shift - Default) */
+  --bg: #111410;
+  --surface: #191C17;
+  --raised: #21251F;
+  --line: #2D322A;
+  --line-2: #3A4036;
+
+  --text: #ECE6D6;
+  --text-2: #A3A290;
+  --text-3: #6E705F;
+
+  --route: #D4F25A;
+  --route-ink: #151A05;
+  --exit: #3FD6C0;
+  --hazard: #FF5B3A;
+  --closed: #F2B23C;
+  --start: #ECE6D6;
+
+  /* Typography */
+  --font-ui: "Instrument Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-bn: "Anek Bangla", var(--font-ui);
+
+  /* Geometry & Elevation */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-pill: 999px;
+  --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.35);
+
+  /* Transitions */
+  --ease-snappy: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 150ms;
+  --dur-med: 250ms;
+  --dur-route: 380ms;
+}
+
+[data-theme="light"] {
+  /* LIGHT THEME (Day Shift) */
+  --bg: #F1EDE2;
+  --surface: #E8E3D5;
+  --raised: #DDD7C6;
+  --line: #CFC8B4;
+  --line-2: #BDB59E;
+
+  --text: #1B1E17;
+  --text-2: #5C5E4E;
+  --text-3: #8A8B78;
+
+  --route: #4F7A0C;
+  --route-ink: #F1EDE2;
+  --exit: #0F8C7A;
+  --hazard: #D23F22;
+  --closed: #B67A0E;
+  --start: #1B1E17;
+
+  --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.12);
+}

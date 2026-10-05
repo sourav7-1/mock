@@ -1,149 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Escape – Interactive Evacuation Route Simulator</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <!-- Header -->
-  <header class="app-header">
-    <div class="header-brand">
-      <div class="brand-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-        </svg>
-      </div>
-      <div>
-        <h1 class="brand-title" data-i18n="appTitle">Smart Escape – Interactive Evacuation Route Simulator</h1>
-        <p class="brand-subtitle" data-i18n="appSubtitle">Real-time emergency evacuation simulator and obstacle rerouter</p>
-      </div>
-    </div>
-    <div class="header-actions">
-      <button type="button" id="btnThemeToggle" class="btn btn-secondary" data-i18n="themeToggle">
-        High Contrast
-      </button>
-      <button type="button" id="btnExportPng" class="btn btn-secondary" data-i18n="exportPng">
-        Export PNG
-      </button>
-      <button type="button" id="btnLangToggle" class="btn btn-primary-outline" aria-label="Toggle Language">
-        বাংলা
-      </button>
-    </div>
-  </header>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Smart Escape – Interactive Evacuation Route Simulator</title>
+    <meta
+      name="description"
+      content="High-precision interactive emergency evacuation route simulator and facility safety console with dynamic Dijkstra rerouting."
+    />
 
-  <!-- Control & Mode Toolbar -->
-  <nav class="app-toolbar" aria-label="Simulation Controls">
-    <div class="toolbar-group">
-      <span class="toolbar-label">Mode:</span>
-      <button type="button" id="btnSelectStart" class="btn btn-mode btn-active" aria-pressed="true" data-i18n="modeSelectStart">
-        Select Start
-      </button>
-      <button type="button" id="btnToggleHazard" class="btn btn-mode" aria-pressed="false" data-i18n="modeToggleHazard">
-        Toggle Hazard
-      </button>
-    </div>
+    <!-- Inline SVG Favicon (Emergency Exit Sign Glyph) -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23111410'%3E%3Crect width='24' height='24' rx='4' fill='%233FD6C0'/%3E%3Cpath d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4' stroke='%23111410' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpolyline points='16 17 21 12 16 7' stroke='%23111410' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cline x1='21' y1='12' x2='9' y2='12' stroke='%23111410' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"
+    />
 
-    <div class="toolbar-group">
-      <button type="button" id="btnLoadSample" class="btn btn-secondary" data-i18n="loadSample">
-        Load Sample
-      </button>
-      <button type="button" id="btnUpload" class="btn btn-secondary" data-i18n="uploadBtn">
-        Upload JSON
-      </button>
-      <input type="file" id="fileInput" accept=".json" class="sr-only" aria-label="Upload building JSON file">
-      <button type="button" id="btnReset" class="btn btn-warning" data-i18n="resetBtn">
-        Reset Hazards
-      </button>
-    </div>
-  </nav>
-
-  <!-- Main Simulator Layout -->
-  <main class="app-main">
-    <!-- SVG Map Area -->
-    <section class="map-section" aria-label="Building Evacuation Map">
-      <div id="mapContainer" class="map-container" tabindex="0" role="region" aria-label="Interactive Building Floor Map">
-        <svg id="svgMap" class="svg-map" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Evacuation network visualization"></svg>
-
-        <!-- Walkthrough overlay controls (appears when route is calculated) -->
-        <div id="walkthroughBar" class="walkthrough-bar" aria-label="Evacuation Route Walkthrough">
-          <div id="wtInfo" class="walkthrough-info">Step 1 of 4: R1</div>
-          <div class="walkthrough-buttons">
-            <button type="button" id="wtPrev" class="btn btn-xs" data-i18n="walkthroughPrev">Previous</button>
-            <button type="button" id="wtPlay" class="btn btn-xs btn-primary" data-i18n="walkthroughPlay">Play</button>
-            <button type="button" id="wtNext" class="btn btn-xs" data-i18n="walkthroughNext">Next</button>
-            <button type="button" id="wtStop" class="btn btn-xs btn-secondary" data-i18n="walkthroughStop">Stop</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Map Legend -->
-      <footer class="map-legend" aria-label="Map Legend">
-        <h3 class="legend-heading" data-i18n="legendTitle">Map Legend</h3>
-        <div class="legend-items">
-          <div class="legend-item">
-            <span class="legend-swatch swatch-room"></span>
-            <span data-i18n="legendRoom">Room</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-swatch swatch-junction"></span>
-            <span data-i18n="legendJunction">Corridor / Junction</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-swatch swatch-exit"></span>
-            <span data-i18n="legendExit">Emergency Exit</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-swatch swatch-start"></span>
-            <span data-i18n="legendStart">Start Location</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-swatch swatch-blocked-node"></span>
-            <span data-i18n="legendBlockedNode">Blocked Node</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-swatch swatch-closed-exit"></span>
-            <span data-i18n="legendClosedExit">Closed Exit</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-swatch swatch-blocked-edge"></span>
-            <span data-i18n="legendBlockedEdge">Blocked Corridor</span>
-          </div>
-          <div class="legend-item">
-            <span class="legend-swatch swatch-route"></span>
-            <span data-i18n="legendRoute">Evacuation Path</span>
-          </div>
-        </div>
-      </footer>
-    </section>
-
-    <!-- Side Panel (Metrics, Hazards, Details) -->
-    <aside id="sidePanel" class="side-panel" aria-label="Evacuation Details Panel">
-      <!-- Content populated dynamically by renderSidePanel -->
-    </aside>
-  </main>
-
-  <!-- Validation Error Modal -->
-  <div id="errorModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="errorModalTitle">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h2 id="errorModalTitle" class="modal-title" data-i18n="validationTitle">Building File Validation Error</h2>
-      </div>
-      <div class="modal-body">
-        <p class="modal-description">The loaded file has formatting or consistency errors that must be resolved:</p>
-        <ul id="errorList" class="error-list"></ul>
-      </div>
-      <div class="modal-footer">
-        <button type="button" id="btnDismissError" class="btn btn-primary" data-i18n="dismiss">Dismiss</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Non-intrusive Toast Notification -->
-  <div id="toast" class="toast" role="alert" aria-live="assertive"></div>
-
-  <!-- Entry Script -->
-  <script type="module" src="js/app.js"></script>
-</body>
+    <!-- Google Fonts: Instrument Sans, JetBrains Mono, Anek Bangla -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anek+Bangla:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

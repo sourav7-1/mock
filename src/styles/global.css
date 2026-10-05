@@ -1,0 +1,229 @@
+/* src/styles/global.css */
+@import "./tokens.css";
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+[lang="bn"] {
+  font-family: var(--font-bn);
+  line-height: 1.6;
+}
+
+/* Tabular figures for mono elements */
+.font-mono, .mono-data {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--route);
+  outline-offset: 2px;
+}
+
+/* Button & interactive primitives */
+button, input, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background-color: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: background-color var(--dur-fast) var(--ease-snappy),
+              border-color var(--dur-fast) var(--ease-snappy),
+              color var(--dur-fast) var(--ease-snappy);
+}
+
+button:hover:not(:disabled) {
+  background-color: var(--raised);
+  border-color: var(--line-2);
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Primary Action Button (Hi-vis Lime) */
+button.btn-primary {
+  background-color: var(--route);
+  color: var(--route-ink);
+  border-color: transparent;
+  font-weight: 600;
+}
+
+button.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+/* Icon Buttons (32x32) */
+button.btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+/* App Shell Layout */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  background-color: var(--bg);
+}
+
+.main-workspace {
+  display: flex;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.canvas-wrapper {
+  flex: 1;
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg);
+}
+
+/* Dot Grid Background with vignette */
+.map-canvas-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  user-select: none;
+  touch-action: none;
+}
+
+.map-canvas-svg.mode-start {
+  cursor: crosshair;
+}
+
+.map-canvas-svg.mode-hazard {
+  cursor: cell;
+}
+
+.map-canvas-svg.is-dragging {
+  cursor: grabbing !important;
+}
+
+/* Dim non-route elements to 55% when a route is active */
+.has-active-route .dimmable-element {
+  opacity: 0.55;
+  transition: opacity var(--dur-med) var(--ease-snappy);
+}
+
+.has-active-route .dimmable-element.on-route,
+.has-active-route .dimmable-element.is-highlighted {
+  opacity: 1 !important;
+}
+
+/* Micro-labels */
+.micro-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+/* Modal and Backdrop */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: none;
+}
+
+.modal-card {
+  background-color: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
+  max-width: 520px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 20px;
+  position: relative;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 3px;
+}
+
+/* Responsive bottom sheet (<960px) */
+@media (max-width: 960px) {
+  .main-workspace {
+    flex-direction: column;
+  }
+  .inspector-panel {
+    width: 100% !important;
+    height: 45vh;
+    border-left: none !important;
+    border-top: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar-right .btn-text {
+    display: none;
+  }
+}
+
+/* Prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

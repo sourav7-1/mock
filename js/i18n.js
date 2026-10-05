@@ -1,210 +1,272 @@
 /**
  * js/i18n.js
- * Internationalization (English & Bangla) for Smart Escape
+ * Night-shift Control Room I18n Dictionary
+ * High-precision safety operations terminology in English and natural Bangla.
  */
 
 export const translations = {
   en: {
-    // Header & Meta
-    appTitle: "Smart Escape – Interactive Evacuation Route Simulator",
-    appSubtitle: "Real-time emergency evacuation simulator and obstacle rerouter",
-    languageToggle: "বাংলা",
-    themeToggle: "High Contrast",
-    themeToggleActive: "Standard Mode",
-    exportPng: "Export PNG",
+    // Header & System Bar
+    appTitle: "SMART ESCAPE",
+    appSubtitle: "FACILITY EGRESS CONTROL SYSTEM",
+    systemArmed: "SYSTEM ARMED",
+    systemDisarmed: "ROUTE FAULT",
+    systemWarning: "ALERT ACTIVE",
+    langEn: "EN",
+    langBn: "বাং",
+    themeToggleDark: "Night Shift",
+    themeToggleLight: "Day Shift",
+    importBtn: "Import",
+    resetBtn: "Reset (R)",
+    shortcutsBtn: "Shortcuts (?)",
+    shortcutsTitle: "Console Key Commands",
+    commandPaletteTitle: "Command Palette",
+    commandPalettePlaceholder: "Type a node ID, corridor, or action (e.g., 'R1', 'C2', 'reset')...",
+    paletteHint: "Use ↑↓ to navigate, Enter to select, Esc to close",
 
-    // Action Bar
+    // Action Modes
+    modeSection: "DISPATCH MODE",
     modeSelectStart: "Select Start",
-    modeToggleHazard: "Toggle Hazard",
-    loadSample: "Load Sample",
-    uploadBtn: "Upload JSON",
-    resetBtn: "Reset Hazards",
+    modeSelectStartHint: "S",
+    modeToggleHazard: "Toggle Hazards",
+    modeToggleHazardHint: "H",
 
-    // Status Messages (must match exact requirement)
+    // Terminal Status Console (Exact Required Strings)
+    statusConsoleRoute: "ROUTE",
+    statusConsoleExit: "EXIT",
+    statusConsoleCost: "COST",
     statusNoRoute: "No route available",
     statusStartBlocked: "Starting location blocked",
-    statusOk: "Optimal evacuation route active",
-    statusNoStart: "No start location selected",
+    statusOk: "Active egress path clear",
+    statusNoStart: "No start origin selected",
+    unblockStartAction: "Unblock Start",
 
-    // Side Panel Headings & Labels
-    panelTitle: "Evacuation Status",
-    buildingLabel: "Building",
-    startNodeLabel: "Current Start",
-    statusLabel: "Status",
-    routeLabel: "Evacuation Route",
-    chosenExitLabel: "Chosen Exit",
-    totalCostLabel: "Total Cost",
-    noneSelected: "None selected",
+    // Map Zoom / Pan Controls
+    zoomIn: "Zoom In (+)",
+    zoomOut: "Zoom Out (−)",
+    zoomFit: "Fit View (F)",
 
-    // Hazards section
-    hazardsHeader: "Active Hazards",
-    blockedNodesLabel: "Blocked Nodes",
-    blockedEdgesLabel: "Blocked Corridors",
-    closedExitsLabel: "Closed Exits",
-    noHazards: "None (corridors clear)",
-    clickToUndo: "Click item to remove hazard",
+    // Route Transit Timeline
+    secTransit: "EGRESS TIMELINE",
+    stepOrigin: "ORIGIN",
+    stepEgress: "SAFETY EXIT",
+    stepJunction: "JUNCTION",
+    stepRoom: "ROOM",
+    totalPathCost: "Total Path Cost",
+    noRouteDetails: "No valid path available from current origin.",
 
-    // Walkthrough controls
-    walkthroughTitle: "Route Walkthrough",
-    walkthroughStep: "Step {current} of {total}: {node}",
-    walkthroughPrev: "Previous",
-    walkthroughNext: "Next",
-    walkthroughPlay: "Play",
-    walkthroughPause: "Pause",
-    walkthroughStop: "Stop",
+    // Hazard Manager
+    secHazards: "ACTIVE RESTRICTIONS",
+    subLocations: "Blocked Locations",
+    subCorridors: "Blocked Corridors",
+    subExits: "Closed Exits",
+    clearAll: "Clear",
+    noHazardsActive: "All pathways nominal. Zero restrictions.",
+    undoToastMsg: "Hazard toggled on {id}",
+    undoBtn: "Undo (Ctrl+Z)",
 
     // Legend
-    legendTitle: "Map Legend",
-    legendRoom: "Room",
-    legendJunction: "Corridor / Junction",
-    legendExit: "Emergency Exit",
-    legendStart: "Start Location",
-    legendBlockedNode: "Blocked Node",
-    legendClosedExit: "Closed Exit",
-    legendBlockedEdge: "Blocked Corridor",
-    legendRoute: "Evacuation Path",
+    secLegend: "SIGNAGE REFERENCE",
+    legendRoom: "Occupant Room",
+    legendJunction: "Corridor Junction",
+    legendExit: "Safety Exit (Jade)",
+    legendStart: "Start Origin (Bone)",
+    legendRoute: "Active Route (Hi-Vis Lime)",
+    legendHazard: "Blocked Hazard (Vermilion)",
+    legendClosed: "Closed Exit (Saffron)",
 
-    // Instructions
-    instructionsTitle: "Quick Instructions",
-    instructionsText: "• Use 'Select Start' mode to set where evacuation begins (rooms/junctions only).\n• Use 'Toggle Hazard' mode (or right-click) to block nodes, corridors, or close exits.\n• The simulator instantly calculates the safest, shortest exit path.",
+    // Metadata
+    secMeta: "SYSTEM TELEMETRY",
+    metaBuilding: "Facility",
+    metaNodes: "Nodal Points",
+    metaEdges: "Corridor Links",
+    metaState: "Operational State",
+    metaStateNormal: "Normal",
 
-    // Dropzone / File input
-    dropzoneText: "Drag & drop building.json here, or click to browse",
+    // Failure State Hints
+    failureNoRouteTitle: "EGRESS COMPROMISED",
+    failureNoRouteDesc: "All exit pathways from this origin are severed by active corridor or node hazards.",
+    failureStartBlockedTitle: "ORIGIN COMPROMISED",
+    failureStartBlockedDesc: "The selected starting location is currently blocked by a hazard.",
 
-    // Validation Errors
-    validationTitle: "Building File Validation Error",
+    // Coach Marks (First-Run Guidance)
+    coach1Title: "1. Select Origin",
+    coach1Desc: "Click any room or junction in 'Select Start' mode (or press 'S') to designate the evacuation origin.",
+    coach2Title: "2. Deploy Hazards",
+    coach2Desc: "Switch to 'Toggle Hazards' mode (press 'H') and click nodes, corridors, or exits to simulate emergency blockages.",
+    coach3Title: "3. Live Wayfinding",
+    coach3Desc: "The console computes the mathematically shortest exit in real-time, previewing reroutes on hover.",
+    coachDismiss: "Acknowledge Console",
+
+    // Validation Report
+    valTitle: "File rejected",
+    valSubtitle: "The building specification failed structural integrity checks:",
+    dismiss: "Dismiss",
+
+    // Specific Errors
     errInvalidJson: "Invalid JSON format: {msg}",
-    errRootObject: "JSON root must be an object",
-    errBuildingString: "'building' field must be a non-empty string",
-    errNodesArray: "'nodes' field must be an array",
+    errRootObject: "Root must be a JSON object",
+    errBuildingString: "'building' must be a non-empty string",
+    errNodesArray: "'nodes' must be an array (2 to 60 nodes)",
     errNodeCount: "Node count must be between 2 and 60 (found {count})",
     errEdgeCount: "Edge count must be between 1 and 150 (found {count})",
     errNodeObject: "Node at index {index} must be an object",
-    errNodeIdRequired: "Node at index {index} is missing a non-empty 'id' string",
+    errNodeIdRequired: "Node at index {index} requires a non-empty string 'id'",
     errNodeDuplicateId: "Duplicate node ID: '{id}'",
-    errNodeLabelRequired: "Node '{id}' must have a non-empty string 'label'",
-    errNodeTypeInvalid: "Node '{id}' type must be 'room', 'junction', or 'exit' (found '{type}')",
+    errNodeLabelRequired: "Node '{id}' requires a non-empty 'label'",
+    errNodeTypeInvalid: "Node '{id}' type must be room, junction, or exit (got '{type}')",
     errNodeCoordsInvalid: "Node '{id}' coordinates (x, y) must be finite numbers",
-    errNeedRoomOrJunction: "Building must contain at least one room or junction",
-    errNeedExit: "Building must contain at least one exit",
-    errEdgesArray: "'edges' field must be an array",
+    errNeedRoomOrJunction: "Graph requires at least one room or junction",
+    errNeedExit: "Graph requires at least one exit",
+    errEdgesArray: "'edges' must be an array (1 to 150 edges)",
     errEdgeObject: "Edge at index {index} must be an object",
-    errEdgeIdRequired: "Edge at index {index} is missing a non-empty 'id' string",
+    errEdgeIdRequired: "Edge at index {index} requires a non-empty string 'id'",
     errEdgeDuplicateId: "Duplicate edge ID: '{id}'",
-    errEdgeUnknownNode: "Edge '{id}' references non-existent node '{nodeId}'",
-    errEdgeSelfLoop: "Self-loop edge not allowed on edge '{id}' (from '{from}' to '{to}')",
-    errEdgeDuplicatePair: "Duplicate edge pair between nodes '{from}' and '{to}'",
+    errEdgeUnknownNode: "Edge '{id}' connects to non-existent node '{nodeId}'",
+    errEdgeSelfLoop: "Self-loop forbidden on edge '{id}' (from '{from}' to '{to}')",
+    errEdgeDuplicatePair: "Duplicate edge pair between '{from}' and '{to}'",
     errEdgeCostInvalid: "Edge '{id}' cost must be a positive integer (found {cost})",
-    errInitialStateObject: "'initial_state' must be an object with blocked_nodes, blocked_edges, and closed_exits arrays",
+    errInitialStateObject: "'initial_state' must contain blocked_nodes, blocked_edges, closed_exits",
     errBlockedNodeInvalid: "blocked_nodes contains invalid or non-room/junction ID: '{id}'",
     errBlockedEdgeInvalid: "blocked_edges contains unknown edge ID: '{id}'",
     errClosedExitInvalid: "closed_exits contains invalid or non-exit ID: '{id}'",
 
-    // General
-    dismiss: "Dismiss",
-    exitBlockedAlert: "Exits cannot be chosen as the starting point.",
-    nodeBlockedAlert: "Starting location blocked"
+    // Hover Tooltip
+    tooltipType: "TYPE",
+    tooltipStatus: "STATUS",
+    tooltipCost: "COST"
   },
+
   bn: {
-    // Header & Meta
-    appTitle: "স্মার্ট এস্কেপ – ইন্টারঅ্যাক্টিভ ইভাকুয়েশন রুট সিমুলেটর",
-    appSubtitle: "জরুরি স্থানান্তর পথ পরিকল্পনা ও রিয়েল-টাইম বাধা সিমুলেটর",
-    languageToggle: "English",
-    themeToggle: "উচ্চ বৈসাদৃশ্য",
-    themeToggleActive: "সাধারণ মোড",
-    exportPng: "পিএনজি সংরক্ষণ",
+    // Header & System Bar
+    appTitle: "স্মার্ট এস্কেপ",
+    appSubtitle: "জরুরি স্থানান্তর নিয়ন্ত্রণ কেন্দ্র",
+    systemArmed: "সিস্টেম প্রস্তুত",
+    systemDisarmed: "পথ বিচ্ছিন্ন",
+    systemWarning: "সতর্কতা জারি",
+    langEn: "EN",
+    langBn: "বাং",
+    themeToggleDark: "নাইট শিফট",
+    themeToggleLight: "ডে শিফট",
+    importBtn: "ফাইল লোড",
+    resetBtn: "রিসেট (R)",
+    shortcutsBtn: "শর্টকাট (?)",
+    shortcutsTitle: "কন্ট্রোল কমান্ডসমূহ",
+    commandPaletteTitle: "কমান্ড প্যালেট",
+    commandPalettePlaceholder: "নোড আইডি, করিডোর বা কমান্ড লিখুন (যেমন 'R1', 'C2')...",
+    paletteHint: "↑↓ দিয়ে নেভিগেট করুন, Enter চাপুন, বন্ধ করতে Esc",
 
-    // Action Bar
-    modeSelectStart: "শুরুর স্থান নির্বাচন",
-    modeToggleHazard: "বিপদ/বাধা পরিবর্তন",
-    loadSample: "নমুনা লোড করুন",
-    uploadBtn: "জেসন আপলোড",
-    resetBtn: "রিসেট করুন",
+    // Action Modes
+    modeSection: "অপারেশন মোড",
+    modeSelectStart: "শুরুর স্থান",
+    modeSelectStartHint: "S",
+    modeToggleHazard: "বাধা পরিবর্তন",
+    modeToggleHazardHint: "H",
 
-    // Status Messages (exact Bangla equivalents)
+    // Terminal Status Console (Exact Required Strings)
+    statusConsoleRoute: "নিষ্ক্রমণ পথ",
+    statusConsoleExit: "প্রস্থান",
+    statusConsoleCost: "মোট খরচ",
     statusNoRoute: "কোনো পথ পাওয়া যায়নি",
     statusStartBlocked: "শুরুর স্থান অবরুদ্ধ",
     statusOk: "নিরাপদ স্থানান্তর পথ সক্রিয়",
-    statusNoStart: "কোনো শুরুর স্থান নির্বাচিত নয়",
+    statusNoStart: "কোনো শুরুর স্থান নির্বাচন করা হয়নি",
+    unblockStartAction: "শুরুর স্থান মুক্ত করুন",
 
-    // Side Panel Headings & Labels
-    panelTitle: "স্থানান্তর অবস্থা",
-    buildingLabel: "ভবন",
-    startNodeLabel: "বর্তমান শুরুর স্থান",
-    statusLabel: "অবস্থা",
-    routeLabel: "নিষ্ক্রমণ পথ",
-    chosenExitLabel: "নির্বাচিত প্রস্থান",
-    totalCostLabel: "মোট খরচ",
-    noneSelected: "কোনোটি নির্বাচিত নয়",
+    // Map Zoom / Pan Controls
+    zoomIn: "জুম ইন (+)",
+    zoomOut: "জুম আউট (−)",
+    zoomFit: "ভিউ ফিট (F)",
 
-    // Hazards section
-    hazardsHeader: "সক্রিয় বিপদ ও প্রতিবন্ধকতা",
-    blockedNodesLabel: "অবরুদ্ধ নোডসমূহ",
-    blockedEdgesLabel: "অবরুদ্ধ করিডোরসমূহ",
-    closedExitsLabel: "বন্ধ প্রস্থানসমূহ",
-    noHazards: "কোনোটি নেই (সকল করিডোর উন্মুক্ত)",
-    clickToUndo: "প্রতিবন্ধকতা সরাতে ক্লিক করুন",
+    // Route Transit Timeline
+    secTransit: "স্থানান্তর রুট টাইমলাইন",
+    stepOrigin: "প্রারম্ভিক বিন্দু",
+    stepEgress: "জরুরি প্রস্থান",
+    stepJunction: "সংযোগস্থল",
+    stepRoom: "কক্ষ (রুম)",
+    totalPathCost: "সর্বমোট পথ খরচ",
+    noRouteDetails: "বর্তমান অবস্থান থেকে কোনো নির্গমন পথ উপলব্ধ নেই।",
 
-    // Walkthrough controls
-    walkthroughTitle: "ধাপে ধাপে পথনির্দেশ",
-    walkthroughStep: "ধাপ {current} / {total}: {node}",
-    walkthroughPrev: "পূর্ববর্তী",
-    walkthroughNext: "পরবর্তী",
-    walkthroughPlay: "চালান",
-    walkthroughPause: "থামান",
-    walkthroughStop: "বন্ধ করুন",
+    // Hazard Manager
+    secHazards: "সক্রিয় প্রতিবন্ধকতা",
+    subLocations: "অবরুদ্ধ অবস্থান",
+    subCorridors: "অবরুদ্ধ করিডোর",
+    subExits: "বন্ধ প্রস্থান",
+    clearAll: "মুছুন",
+    noHazardsActive: "সকল পথ স্বাভাবিক। কোনো প্রতিবন্ধকতা নেই।",
+    undoToastMsg: "{id}-এ বাধা পরিবর্তন করা হয়েছে",
+    undoBtn: "পূর্বাবস্থা (Ctrl+Z)",
 
     // Legend
-    legendTitle: "মানচিত্র সংকেত",
-    legendRoom: "রুম (কক্ষ)",
-    legendJunction: "করিডোর / সংযোগস্থল",
-    legendExit: "জরুরি প্রস্থান",
-    legendStart: "শুরুর স্থান",
-    legendBlockedNode: "অবরুদ্ধ নোড (বিপদ)",
-    legendClosedExit: "বন্ধ প্রস্থান",
-    legendBlockedEdge: "অবরুদ্ধ করিডোর",
-    legendRoute: "নিষ্ক্রমণ পথ",
+    secLegend: "চিহ্ন পরিচিতি",
+    legendRoom: "রুম (ব্যবহারকারী এলাকা)",
+    legendJunction: "করিডোর সংযোগস্থল",
+    legendExit: "জরুরি প্রস্থান (জেড-টিল)",
+    legendStart: "শুরুর অবস্থান (বোন)",
+    legendRoute: "নিষ্ক্রমণ পথ (হাই-ভিস লাইম)",
+    legendHazard: "অবরুদ্ধ নোড/করিডোর (ভার্মিলিয়ন)",
+    legendClosed: "বন্ধ প্রস্থান (জাফরান)",
 
-    // Instructions
-    instructionsTitle: "ব্যবহার নির্দেশিকা",
-    instructionsText: "• 'শুরুর স্থান নির্বাচন' মোডে যেকোনো রুম বা সংযোগস্থলে ক্লিক করে স্থানান্তর শুরু করুন।\n• 'বিপদ/বাধা পরিবর্তন' মোডে (বা রাইট-ক্লিকে) নোড, করিডোর বা প্রস্থান অবরুদ্ধ করুন।\n• সিমুলেটর তৎক্ষণাৎ সবচেয়ে নিরাপদ ও সংক্ষিপ্ততম পথ নির্ণয় করবে।",
+    // Metadata
+    secMeta: "সিস্টেম টেলিমেট্রি",
+    metaBuilding: "ভবনের নাম",
+    metaNodes: "নোড সংখ্যা",
+    metaEdges: "করিডোর সংখ্যা",
+    metaState: "কার্যকরী অবস্থা",
+    metaStateNormal: "স্বাভাবিক",
 
-    // Dropzone / File input
-    dropzoneText: "এখানে building.json ড্রপ করুন অথবা নির্বাচন করতে ক্লিক করুন",
+    // Failure State Hints
+    failureNoRouteTitle: "নিষ্ক্রমণ পথ অবরুদ্ধ",
+    failureNoRouteDesc: "করিডোর বা নোডের বাধার কারণে এই স্থান থেকে সকল প্রস্থান পথ বিচ্ছিন্ন হয়ে পড়েছে।",
+    failureStartBlockedTitle: "শুরুর স্থান অবরুদ্ধ",
+    failureStartBlockedDesc: "নির্বাচিত প্রারম্ভিক অবস্থানটিতে বর্তমানে একটি বিপদ/বাধা বিদ্যমান।",
 
-    // Validation Errors
-    validationTitle: "ভবন ফাইল যাচাইকরণ ত্রুটি",
+    // Coach Marks
+    coach1Title: "১. শুরুর স্থান নির্বাচন",
+    coach1Desc: "স্থানান্তর শুরু করতে 'শুরুর স্থান' মোডে (বা 'S' চেপে) যেকোনো রুম বা সংযোগস্থলে ক্লিক করুন।",
+    coach2Title: "২. বিপদ তৈরি করুন",
+    coach2Desc: "'বাধা পরিবর্তন' মোডে (বা 'H' চেপে) ক্লিক করে পথ অবরুদ্ধ করুন বা প্রস্থান বন্ধ করুন।",
+    coach3Title: "৩. লাইভ গতিপথ",
+    coach3Desc: "সিমুলেটর তৎক্ষণাৎ সবচেয়ে নিরাপদ সংক্ষিপ্ততম পথ গণনা করবে এবং হোভারে নতুন পথ দেখাবে।",
+    coachDismiss: "বুঝেছি",
+
+    // Validation Report
+    valTitle: "ফাইলটি গ্রহণযোগ্য নয়",
+    valSubtitle: "ভবন ফাইলে কাঠামোগত ত্রুটি পাওয়া গেছে:",
+    dismiss: "বাতিল করুন",
+
+    // Specific Errors
     errInvalidJson: "অবৈধ জেসন ফরম্যাট: {msg}",
-    errRootObject: "জেসন রুট অবশ্যই একটি অবজেক্ট হতে হবে",
-    errBuildingString: "'building' ফিল্ডটি একটি অ-খালি স্ট্রিং হতে হবে",
-    errNodesArray: "'nodes' ফিল্ডটি অবশ্যই একটি অ্যারে হতে হবে",
+    errRootObject: "রুট অবশ্যই একটি অবজেক্ট হতে হবে",
+    errBuildingString: "'building' অবশ্যই একটি অ-খালি স্ট্রিং হতে হবে",
+    errNodesArray: "'nodes' অবশ্যই ২ থেকে ৬০ টি নোডের অ্যারে হতে হবে",
     errNodeCount: "নোডের সংখ্যা ২ থেকে ৬০ এর মধ্যে হতে হবে (পাওয়া গেছে {count})",
     errEdgeCount: "এজের সংখ্যা ১ থেকে ১৫০ এর মধ্যে হতে হবে (পাওয়া গেছে {count})",
     errNodeObject: "{index} নম্বর নোডটি একটি অবজেক্ট হতে হবে",
-    errNodeIdRequired: "{index} নম্বর নোডের একটি সঠিক অ-খালি 'id' প্রয়োজন",
+    errNodeIdRequired: "{index} নম্বর নোডের 'id' আবশ্যক",
     errNodeDuplicateId: "পুনরাবৃত্ত নোড আইডি: '{id}'",
-    errNodeLabelRequired: "নোড '{id}'-এ একটি অ-খালি 'label' আবশ্যক",
-    errNodeTypeInvalid: "নোড '{id}'-এর ধরন অবশ্যই 'room', 'junction', অথবা 'exit' হতে হবে (পাওয়া গেছে '{type}')",
-    errNodeCoordsInvalid: "নোড '{id}'-এর স্থানাঙ্ক (x, y) সসীম সংখ্যা হতে হবে",
-    errNeedRoomOrJunction: "ভবনে অন্তত একটি রুম বা সংযোগস্থল থাকতে হবে",
-    errNeedExit: "ভবনে অন্তত একটি জরুরি প্রস্থান থাকতে হবে",
-    errEdgesArray: "'edges' ফিল্ডটি অবশ্যই একটি অ্যারে হতে হবে",
+    errNodeLabelRequired: "নোড '{id}'-এ লেবেল প্রয়োজন",
+    errNodeTypeInvalid: "নোড '{id}'-এর ধরন অবৈধ ('{type}')",
+    errNodeCoordsInvalid: "নোড '{id}'-এর স্থানাঙ্ক সসীম সংখ্যা হতে হবে",
+    errNeedRoomOrJunction: "কমপক্ষে একটি রুম বা সংযোগস্থল থাকতে হবে",
+    errNeedExit: "কমপক্ষে একটি প্রস্থান থাকতে হবে",
+    errEdgesArray: "'edges' অবশ্যই ১ থেকে ১৫০ টি এজের অ্যারে হতে হবে",
     errEdgeObject: "{index} নম্বর এজটি একটি অবজেক্ট হতে হবে",
-    errEdgeIdRequired: "{index} নম্বর এজের একটি সঠিক অ-খালি 'id' প্রয়োজন",
+    errEdgeIdRequired: "{index} নম্বর এজের 'id' আবশ্যক",
     errEdgeDuplicateId: "পুনরাবৃত্ত এজ আইডি: '{id}'",
-    errEdgeUnknownNode: "এজ '{id}' বিদ্যমান নেই এমন নোড '{nodeId}'-কে নির্দেশ করছে",
-    errEdgeSelfLoop: "এজ '{id}'-এ সেল্ফ-লুপ অনুমোদিত নয় (from '{from}' to '{to}')",
-    errEdgeDuplicatePair: "'{from}' এবং '{to}'-এর মধ্যে পুনরাবৃত্ত এজ বিদ্যমান",
-    errEdgeCostInvalid: "এজ '{id}'-এর খরচ অবশ্যই ধনাত্মক পূর্ণসংখ্যা হতে হবে (পাওয়া গেছে {cost})",
-    errInitialStateObject: "'initial_state' অবশ্যই blocked_nodes, blocked_edges, এবং closed_exits অ্যারে সংবলিত অবজেক্ট হতে হবে",
-    errBlockedNodeInvalid: "blocked_nodes-এ অবৈধ বা রুম/জাংশন বহির্ভূত আইডি: '{id}'",
+    errEdgeUnknownNode: "এজ '{id}' অজানা নোড '{nodeId}'-কে নির্দেশ করছে",
+    errEdgeSelfLoop: "এজ '{id}'-এ সেল্ফ-লুপ অনুমোদিত নয় ('{from}')",
+    errEdgeDuplicatePair: "'{from}' ও '{to}'-এর মাঝে একাধিক এজ বিদ্যমান",
+    errEdgeCostInvalid: "এজ '{id}'-এর খরচ অবশ্যই ধনাত্মক পূর্ণসংখ্যা হতে হবে",
+    errInitialStateObject: "'initial_state'-এ blocked_nodes, blocked_edges, closed_exits থাকতে হবে",
+    errBlockedNodeInvalid: "blocked_nodes-এ অবৈধ আইডি: '{id}'",
     errBlockedEdgeInvalid: "blocked_edges-এ অজানা এজ আইডি: '{id}'",
-    errClosedExitInvalid: "closed_exits-এ অবৈধ বা প্রস্থান বহির্ভূত আইডি: '{id}'",
+    errClosedExitInvalid: "closed_exits-এ অবৈধ আইডি: '{id}'",
 
-    // General
-    dismiss: "বাতিল করুন",
-    exitBlockedAlert: "প্রস্থানকে শুরুর স্থান হিসেবে নির্বাচন করা যাবে না।",
-    nodeBlockedAlert: "শুরুর স্থান অবরুদ্ধ"
+    // Hover Tooltip
+    tooltipType: "ধরন",
+    tooltipStatus: "অবস্থা",
+    tooltipCost: "খরচ"
   }
 };
 
@@ -264,4 +326,3 @@ export function updateDomTranslations() {
     }
   });
 }
-

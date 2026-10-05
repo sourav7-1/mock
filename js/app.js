@@ -1,14 +1,15 @@
 /**
  * js/app.js
- * Main application coordinator for Smart Escape.
+ * Night-shift Operations Console Controller
+ * Pan/Zoom engine, hover preview, route diff, undo stack, command palette, and coach marks.
  */
 
 import { validateBuilding } from "./validate.js";
 import { findEvacuationRoute } from "./router.js";
-import { renderGraph, renderSidePanel } from "./render.js";
+import { renderGraph, renderInspector } from "./render.js";
 import { t, setLanguage, getLanguage, updateDomTranslations } from "./i18n.js";
 
-// Embedded fallback sample so offline / file:// protocol always works
+// Offline Embedded Fallback
 const FALLBACK_SAMPLE_JSON = {
   building: "Science Complex Level 1",
   nodes: [
@@ -49,38 +50,70 @@ let appState = {
     closed_exits: []
   },
   routeResult: null,
-  walkthrough: {
-    active: false,
-    index: 0,
-    timer: null
-  },
-  highContrast: false
+  ghostRoute: null,
+  diffRoute: null,
+  diffTimer: null,
+  costDeltaStr: null,
+  highlightedSegment: null,
+  undoStack: [],
+  theme: "dark", // Dark theme is default
+  zoom: { x: 0, y: 0, scale: 1 },
+  isPanning: false,
+  panStart: { x: 0, y: 0 }
 };
 
-// DOM references
-let svgMap = null;
-let sidePanelEl = null;
+// DOM References
+let svgCanvas = null;
+let canvasViewport = null;
+let statusConsoleEl = null;
+let controlInspectorEl = null;
 let fileInputEl = null;
-let errorModalEl = null;
-let errorListEl = null;
-let toastEl = null;
-let walkthroughBarEl = null;
+let inlineValBoxEl = null;
+let valIssuesListEl = null;
+let emptyFrameEl = null;
+let consoleTooltipEl = null;
+let consoleToastEl = null;
+let toastMsgEl = null;
+let toastTimer = null;
+let commandPaletteEl = null;
+let paletteInputEl = null;
+let paletteResultsListEl = null;
+let shortcutsPopoverEl = null;
+let coachMarksBarEl = null;
+let failureOverlayEl = null;
+let failTitleEl = null;
+let failDescEl = null;
+let btnFailActionEl = null;
+let systemDotEl = null;
+let systemStatusTextEl = null;
 
 function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 
-/**
- * Initializes the application
- */
 export function initApp() {
-  svgMap = document.getElementById("svgMap");
-  sidePanelEl = document.getElementById("sidePanel");
+  svgCanvas = document.getElementById("svgCanvas");
+  canvasViewport = document.getElementById("canvasViewport");
+  statusConsoleEl = document.getElementById("statusConsole");
+  controlInspectorEl = document.getElementById("controlInspector");
   fileInputEl = document.getElementById("fileInput");
-  errorModalEl = document.getElementById("errorModal");
-  errorListEl = document.getElementById("errorList");
-  toastEl = document.getElementById("toast");
-  walkthroughBarEl = document.getElementById("walkthroughBar");
+  inlineValBoxEl = document.getElementById("inlineValBox");
+  valIssuesListEl = document.getElementById("valIssuesList");
+  emptyFrameEl = document.getElementById("emptyFrame");
+  consoleTooltipEl = document.getElementById("consoleTooltip");
+  consoleToastEl = document.getElementById("consoleToast");
+  toastMsgEl = document.getElementById("toastMsg");
+  commandPaletteEl = document.getElementById("commandPalette");
+  paletteInputEl = document.getElementById("paletteInput");
+  paletteResultsListEl = document.getElementById("paletteResultsList");
+  shortcutsPopoverEl = document.getElementById("shortcutsPopover");
+  coachMarksBarEl = document.getElementById("coachMarksBar");
+  failureOverlayEl = document.getElementById("failureOverlay");
+  failTitleEl = document.getElementById("failTitle");
+  failDescEl = document.getElementById("failDesc");
+  btnFailActionEl = document.getElementById("btnFailAction");
+  systemDotEl = document.getElementById("systemDot");
+  systemStatusTextEl = document.getElementById("systemStatusText");
 
   bindEvents();
   loadSavedState();
@@ -90,31 +123,23 @@ export function initApp() {
   } else {
     recomputeAndRender();
   }
+
+  checkFirstRunCoach();
 }
 
-/**
- * Binds UI Event Listeners
- */
 function bindEvents() {
-  // Mode selection buttons
-  const btnSelectStart = document.getElementById("btnSelectStart");
-  const btnToggleHazard = document.getElementById("btnToggleHazard");
-
-  if (btnSelectStart && btnToggleHazard) {
-    btnSelectStart.addEventListener("click", () => setInteractionMode("select"));
-    btnToggleHazard.addEventListener("click", () => setInteractionMode("hazard"));
+  // Theme Toggle
+  const btnThemeToggle = document.getElementById("btnThemeToggle");
+  if (btnThemeToggle) {
+    btnThemeToggle.addEventListener("click", toggleTheme);
   }
 
-  // Load sample button
-  const btnLoadSample = document.getElementById("btnLoadSample");
-  if (btnLoadSample) {
-    btnLoadSample.addEventListener("click", () => loadSampleBuilding());
-  }
-
-  // Reset button
-  const btnReset = document.getElementById("btnReset");
-  if (btnReset) {
-    btnReset.addEventListener("click", () => handleReset());
+  // Language Segmented Control
+  const btnLangEn = document.getElementById("btnLangEn");
+  const btnLangBn = document.getElementById("btnLangBn");
+  if (btnLangEn && btnLangBn) {
+    btnLangEn.addEventListener("click", () => setAppLanguage("en"));
+    btnLangBn.addEventListener("click", () => setAppLanguage("bn"));
   }
 
   // File Upload
@@ -124,43 +149,26 @@ function bindEvents() {
     fileInputEl.addEventListener("change", handleFileSelect);
   }
 
-  // Drag and Drop on Map Container
-  const mapContainer = document.getElementById("mapContainer");
-  if (mapContainer) {
-    mapContainer.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      mapContainer.classList.add("drag-over");
-    });
-    mapContainer.addEventListener("dragleave", (e) => {
-      e.preventDefault();
-      mapContainer.classList.remove("drag-over");
-    });
-    mapContainer.addEventListener("drop", handleFileDrop);
+  const btnEmptyUpload = document.getElementById("btnEmptyUpload");
+  if (btnEmptyUpload && fileInputEl) {
+    btnEmptyUpload.addEventListener("click", () => fileInputEl.click());
   }
 
-  // Language Toggle
-  const btnLangToggle = document.getElementById("btnLangToggle");
-  if (btnLangToggle) {
-    btnLangToggle.addEventListener("click", () => {
-      const nextLang = getLanguage() === "en" ? "bn" : "en";
-      setLanguage(nextLang);
-      btnLangToggle.textContent = nextLang === "en" ? "বাংলা" : "English";
-      saveStateToStorage();
-      recomputeAndRender();
-    });
+  // Sample Building
+  const btnLoadSample = document.getElementById("btnLoadSample");
+  if (btnLoadSample) {
+    btnLoadSample.addEventListener("click", loadSampleBuilding);
   }
 
-  // High Contrast Toggle
-  const btnThemeToggle = document.getElementById("btnThemeToggle");
-  if (btnThemeToggle) {
-    btnThemeToggle.addEventListener("click", () => {
-      appState.highContrast = !appState.highContrast;
-      document.body.classList.toggle("high-contrast", appState.highContrast);
-      btnThemeToggle.textContent = appState.highContrast
-        ? t("themeToggleActive")
-        : t("themeToggle");
-      saveStateToStorage();
-    });
+  const btnEmptySample = document.getElementById("btnEmptySample");
+  if (btnEmptySample) {
+    btnEmptySample.addEventListener("click", loadSampleBuilding);
+  }
+
+  // Reset Hazards
+  const btnReset = document.getElementById("btnReset");
+  if (btnReset) {
+    btnReset.addEventListener("click", handleReset);
   }
 
   // Export PNG
@@ -169,52 +177,261 @@ function bindEvents() {
     btnExportPng.addEventListener("click", exportMapAsPng);
   }
 
-  // Modal dismiss button
-  const btnDismissError = document.getElementById("btnDismissError");
-  if (btnDismissError && errorModalEl) {
-    btnDismissError.addEventListener("click", () => {
-      errorModalEl.classList.remove("visible");
+  // Zoom Controls
+  const btnZoomIn = document.getElementById("btnZoomIn");
+  const btnZoomOut = document.getElementById("btnZoomOut");
+  const btnZoomFit = document.getElementById("btnZoomFit");
+
+  if (btnZoomIn) btnZoomIn.addEventListener("click", () => adjustZoom(1.2));
+  if (btnZoomOut) btnZoomOut.addEventListener("click", () => adjustZoom(0.8));
+  if (btnZoomFit) btnZoomFit.addEventListener("click", fitZoom);
+
+  // Pan & Wheel Zoom on Canvas Viewport
+  if (canvasViewport) {
+    canvasViewport.addEventListener("wheel", handleWheelZoom, { passive: false });
+    canvasViewport.addEventListener("mousedown", handlePanStart);
+    window.addEventListener("mousemove", handlePanMove);
+    window.addEventListener("mouseup", handlePanEnd);
+
+    // Drag-and-drop
+    canvasViewport.addEventListener("dragover", (e) => e.preventDefault());
+    canvasViewport.addEventListener("drop", handleFileDrop);
+  }
+
+  // Toast Undo
+  const btnToastUndo = document.getElementById("btnToastUndo");
+  if (btnToastUndo) {
+    btnToastUndo.addEventListener("click", handleUndo);
+  }
+
+  // Command Palette
+  const btnCommandPalette = document.getElementById("btnCommandPalette");
+  if (btnCommandPalette) {
+    btnCommandPalette.addEventListener("click", openCommandPalette);
+  }
+
+  if (paletteInputEl) {
+    paletteInputEl.addEventListener("input", handlePaletteSearch);
+    paletteInputEl.addEventListener("keydown", handlePaletteKeydown);
+  }
+
+  if (commandPaletteEl) {
+    commandPaletteEl.addEventListener("click", (e) => {
+      if (e.target === commandPaletteEl) closeCommandPalette();
     });
   }
 
-  // Walkthrough controls
-  const wtPrev = document.getElementById("wtPrev");
-  const wtPlay = document.getElementById("wtPlay");
-  const wtNext = document.getElementById("wtNext");
-  const wtStop = document.getElementById("wtStop");
+  // Shortcuts Dialog
+  const btnShortcuts = document.getElementById("btnShortcuts");
+  const btnCloseShortcuts = document.getElementById("btnCloseShortcuts");
+  if (btnShortcuts && shortcutsPopoverEl) {
+    btnShortcuts.addEventListener("click", () => {
+      shortcutsPopoverEl.classList.toggle("visible");
+    });
+  }
+  if (btnCloseShortcuts && shortcutsPopoverEl) {
+    btnCloseShortcuts.addEventListener("click", () => {
+      shortcutsPopoverEl.classList.remove("visible");
+    });
+  }
 
-  if (wtPrev) wtPrev.addEventListener("click", () => stepWalkthrough(-1));
-  if (wtNext) wtNext.addEventListener("click", () => stepWalkthrough(1));
-  if (wtPlay) wtPlay.addEventListener("click", toggleWalkthroughPlay);
-  if (wtStop) wtStop.addEventListener("click", stopWalkthrough);
+  // Dismiss Validation
+  const btnDismissVal = document.getElementById("btnDismissVal");
+  if (btnDismissVal && inlineValBoxEl) {
+    btnDismissVal.addEventListener("click", () => {
+      inlineValBoxEl.classList.remove("visible");
+    });
+  }
+
+  // Dismiss Coach Marks
+  const btnDismissCoach = document.getElementById("btnDismissCoach");
+  if (btnDismissCoach && coachMarksBarEl) {
+    btnDismissCoach.addEventListener("click", () => {
+      coachMarksBarEl.classList.remove("visible");
+      try {
+        localStorage.setItem("coach_dismissed", "true");
+      } catch (_) {}
+    });
+  }
+
+  // Failure Action (Unblock start)
+  if (btnFailActionEl) {
+    btnFailActionEl.addEventListener("click", handleUnblockStart);
+  }
+
+  // Global Keydown Handler
+  window.addEventListener("keydown", handleGlobalShortcuts);
 }
 
-/**
- * Sets interaction mode ("select" or "hazard")
- */
-function setInteractionMode(mode) {
-  appState.activeMode = mode;
-  const btnSelectStart = document.getElementById("btnSelectStart");
-  const btnToggleHazard = document.getElementById("btnToggleHazard");
+function handleGlobalShortcuts(e) {
+  // Ignore inside inputs or textarea except Escape / Ctrl
+  const isInput = e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA";
 
-  if (btnSelectStart && btnToggleHazard) {
-    if (mode === "select") {
-      btnSelectStart.classList.add("btn-active");
-      btnSelectStart.setAttribute("aria-pressed", "true");
-      btnToggleHazard.classList.remove("btn-active");
-      btnToggleHazard.setAttribute("aria-pressed", "false");
-    } else {
-      btnSelectStart.classList.remove("btn-active");
-      btnSelectStart.setAttribute("aria-pressed", "false");
-      btnToggleHazard.classList.add("btn-active");
-      btnToggleHazard.setAttribute("aria-pressed", "true");
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    openCommandPalette();
+    return;
+  }
+
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+    e.preventDefault();
+    handleUndo();
+    return;
+  }
+
+  if (e.key === "Escape") {
+    if (commandPaletteEl && commandPaletteEl.classList.contains("visible")) {
+      closeCommandPalette();
+      return;
     }
+    if (shortcutsPopoverEl && shortcutsPopoverEl.classList.contains("visible")) {
+      shortcutsPopoverEl.classList.remove("visible");
+      return;
+    }
+    if (inlineValBoxEl && inlineValBoxEl.classList.contains("visible")) {
+      inlineValBoxEl.classList.remove("visible");
+      return;
+    }
+    return;
+  }
+
+  if (isInput) return;
+
+  const k = e.key.toLowerCase();
+  if (k === "s") {
+    e.preventDefault();
+    setInteractionMode("select");
+  } else if (k === "h") {
+    e.preventDefault();
+    setInteractionMode("hazard");
+  } else if (k === "r") {
+    e.preventDefault();
+    handleReset();
+  } else if (k === "l") {
+    e.preventDefault();
+    const nextLang = getLanguage() === "en" ? "bn" : "en";
+    setAppLanguage(nextLang);
+  } else if (k === "t") {
+    e.preventDefault();
+    toggleTheme();
+  } else if (k === "f") {
+    e.preventDefault();
+    fitZoom();
+  } else if (e.key === "?" || (e.shiftKey && e.key === "?")) {
+    e.preventDefault();
+    if (shortcutsPopoverEl) shortcutsPopoverEl.classList.toggle("visible");
   }
 }
 
-/**
- * Loads sample building from sample/building.json (or fallback)
- */
+// Pan & Zoom Engine
+function handleWheelZoom(e) {
+  e.preventDefault();
+  const rect = canvasViewport.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  const delta = e.deltaY < 0 ? 1.12 : 0.88;
+  const newScale = Math.min(Math.max(appState.zoom.scale * delta, 0.4), 4);
+
+  // Zoom centered at cursor
+  appState.zoom.x = mouseX - (mouseX - appState.zoom.x) * (newScale / appState.zoom.scale);
+  appState.zoom.y = mouseY - (mouseY - appState.zoom.y) * (newScale / appState.zoom.scale);
+  appState.zoom.scale = newScale;
+
+  updateCanvasTransform();
+}
+
+function handlePanStart(e) {
+  // Only start pan on viewport or svg background, not on interactive nodes/edges
+  if (e.target.closest(".node-g") || e.target.closest(".edge-item") || e.target.closest(".map-view-controls")) {
+    return;
+  }
+  appState.isPanning = true;
+  appState.panStart = { x: e.clientX - appState.zoom.x, y: e.clientY - appState.zoom.y };
+}
+
+function handlePanMove(e) {
+  if (!appState.isPanning) return;
+  appState.zoom.x = e.clientX - appState.panStart.x;
+  appState.zoom.y = e.clientY - appState.panStart.y;
+  updateCanvasTransform();
+}
+
+function handlePanEnd() {
+  appState.isPanning = false;
+}
+
+function adjustZoom(factor) {
+  const rect = canvasViewport.getBoundingClientRect();
+  const centerX = rect.width / 2;
+  const centerY = rect.height / 2;
+  const newScale = Math.min(Math.max(appState.zoom.scale * factor, 0.4), 4);
+
+  appState.zoom.x = centerX - (centerX - appState.zoom.x) * (newScale / appState.zoom.scale);
+  appState.zoom.y = centerY - (centerY - appState.zoom.y) * (newScale / appState.zoom.scale);
+  appState.zoom.scale = newScale;
+
+  updateCanvasTransform();
+}
+
+function fitZoom() {
+  appState.zoom = { x: 0, y: 0, scale: 1 };
+  updateCanvasTransform();
+}
+
+function updateCanvasTransform() {
+  const rootG = document.getElementById("viewportTransformGroup");
+  if (rootG) {
+    rootG.setAttribute(
+      "transform",
+      `translate(${appState.zoom.x}, ${appState.zoom.y}) scale(${appState.zoom.scale})`
+    );
+  }
+}
+
+function setInteractionMode(mode) {
+  appState.activeMode = mode;
+  if (canvasViewport) {
+    canvasViewport.classList.toggle("mode-select", mode === "select");
+    canvasViewport.classList.toggle("mode-hazard", mode === "hazard");
+  }
+  appState.ghostRoute = null;
+  recomputeAndRender();
+}
+
+function toggleTheme() {
+  appState.theme = appState.theme === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", appState.theme);
+
+  const themeText = document.getElementById("themeToggleText");
+  if (themeText) {
+    themeText.textContent = appState.theme === "dark" ? t("themeToggleDark") : t("themeToggleLight");
+  }
+
+  saveStateToStorage();
+}
+
+function setAppLanguage(lang) {
+  setLanguage(lang);
+
+  const btnLangEn = document.getElementById("btnLangEn");
+  const btnLangBn = document.getElementById("btnLangBn");
+  if (btnLangEn && btnLangBn) {
+    btnLangEn.classList.toggle("active", lang === "en");
+    btnLangEn.setAttribute("aria-pressed", lang === "en");
+    btnLangBn.classList.toggle("active", lang === "bn");
+    btnLangBn.setAttribute("aria-pressed", lang === "bn");
+  }
+
+  const themeText = document.getElementById("themeToggleText");
+  if (themeText) {
+    themeText.textContent = appState.theme === "dark" ? t("themeToggleDark") : t("themeToggleLight");
+  }
+
+  saveStateToStorage();
+  recomputeAndRender();
+}
+
 async function loadSampleBuilding() {
   try {
     const res = await fetch("sample/building.json");
@@ -222,14 +439,11 @@ async function loadSampleBuilding() {
     const data = await res.json();
     processLoadedData(data);
   } catch (err) {
-    console.warn("Fetch failed, using embedded sample:", err);
+    console.warn("Fetch failed, using embedded fallback:", err);
     processLoadedData(FALLBACK_SAMPLE_JSON);
   }
 }
 
-/**
- * Handles file input change
- */
 function handleFileSelect(e) {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
@@ -237,47 +451,36 @@ function handleFileSelect(e) {
   e.target.value = "";
 }
 
-/**
- * Handles drag and drop file drop
- */
 function handleFileDrop(e) {
   e.preventDefault();
-  const mapContainer = document.getElementById("mapContainer");
-  if (mapContainer) mapContainer.classList.remove("drag-over");
-
   if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
     readFile(e.dataTransfer.files[0]);
   }
 }
 
-/**
- * Reads file with FileReader and validates
- */
 function readFile(file) {
   const reader = new FileReader();
   reader.onload = (evt) => {
     try {
-      const content = evt.target.result;
-      processLoadedData(content);
+      processLoadedData(evt.target.result);
     } catch (err) {
-      showErrorModal([t("errInvalidJson", { msg: err.message })]);
+      showValidationReport([t("errInvalidJson", { msg: err.message })]);
     }
   };
   reader.onerror = () => {
-    showErrorModal(["Failed to read the local file"]);
+    showValidationReport(["Failed to read the selected file."]);
   };
   reader.readAsText(file);
 }
 
-/**
- * Validates and sets loaded building data
- */
 function processLoadedData(raw) {
   const result = validateBuilding(raw);
   if (!result.valid) {
-    showErrorModal(result.errors);
+    showValidationReport(result.errors);
     return;
   }
+
+  if (inlineValBoxEl) inlineValBoxEl.classList.remove("visible");
 
   const data = result.data;
   appState.graph = {
@@ -289,128 +492,102 @@ function processLoadedData(raw) {
 
   appState.originalInitialState = deepClone(data.initial_state);
   appState.state = deepClone(data.initial_state);
+  appState.undoStack = [];
+  appState.diffRoute = null;
+  appState.costDeltaStr = null;
 
-  // Set default start: pick first room if available, else first junction
   const candidate =
     data.nodes.find((n) => n.type === "room" && !appState.state.blocked_nodes.includes(n.id)) ||
     data.nodes.find((n) => n.type === "junction" && !appState.state.blocked_nodes.includes(n.id));
 
   appState.currentStart = candidate ? candidate.id : null;
 
-  stopWalkthrough();
+  if (emptyFrameEl) emptyFrameEl.classList.remove("visible");
+
+  const headerFacilityName = document.getElementById("headerFacilityName");
+  if (headerFacilityName) headerFacilityName.textContent = data.building;
+
+  fitZoom();
   saveStateToStorage();
   recomputeAndRender();
 }
 
-/**
- * Shows validation error modal listing every problem found
- */
-function showErrorModal(errors) {
-  if (!errorModalEl || !errorListEl) {
+function showValidationReport(errors) {
+  if (!inlineValBoxEl || !valIssuesListEl) {
     alert("Validation Errors:\n\n" + errors.join("\n"));
     return;
   }
 
-  errorListEl.innerHTML = errors
-    .map((err) => `<li class="error-item">${escapeHtml(err)}</li>`)
+  valIssuesListEl.innerHTML = errors
+    .map((err) => `<li class="val-issue-line">${err}</li>`)
     .join("");
 
-  errorModalEl.classList.add("visible");
+  inlineValBoxEl.classList.add("visible");
 }
 
-/**
- * Shows temporary toast message
- */
-function showToast(message) {
-  if (!toastEl) return;
-  toastEl.textContent = message;
-  toastEl.classList.add("toast-show");
-  clearTimeout(toastEl._timer);
-  toastEl._timer = setTimeout(() => {
-    toastEl.classList.remove("toast-show");
-  }, 2400);
-}
-
-/**
- * Handles Node Click
- */
 function handleNodeClick(nodeId, nodeType) {
   if (appState.activeMode === "select") {
-    // Select Start Mode
-    if (nodeType === "exit") {
-      showToast(t("exitBlockedAlert"));
-      return;
-    }
-
-    if (appState.state.blocked_nodes.includes(nodeId)) {
-      showToast(t("nodeBlockedAlert"));
-      // Prompt: "Clicking a blocked node in select mode shows a message instead."
-      return;
-    }
+    if (nodeType === "exit") return; // Exits cannot be start
 
     appState.currentStart = nodeId;
     recomputeAndRender();
   } else {
-    // Hazard Mode: click room/junction -> block/unblock; click exit -> close/reopen
+    pushUndoState();
     toggleNodeHazard(nodeId, nodeType);
+    triggerUndoToast(nodeId);
   }
 }
 
-/**
- * Handles Node Context Menu (Right-Click)
- */
 function handleNodeContextMenu(nodeId, nodeType) {
+  pushUndoState();
   toggleNodeHazard(nodeId, nodeType);
+  triggerUndoToast(nodeId);
 }
 
-/**
- * Toggles Hazard on Node
- */
 function toggleNodeHazard(nodeId, nodeType) {
+  savePreviousRouteForDiff();
+
   if (nodeType === "exit") {
     const idx = appState.state.closed_exits.indexOf(nodeId);
-    if (idx >= 0) {
-      appState.state.closed_exits.splice(idx, 1);
-    } else {
-      appState.state.closed_exits.push(nodeId);
-    }
+    if (idx >= 0) appState.state.closed_exits.splice(idx, 1);
+    else appState.state.closed_exits.push(nodeId);
   } else {
     const idx = appState.state.blocked_nodes.indexOf(nodeId);
-    if (idx >= 0) {
-      appState.state.blocked_nodes.splice(idx, 1);
-    } else {
-      appState.state.blocked_nodes.push(nodeId);
-    }
+    if (idx >= 0) appState.state.blocked_nodes.splice(idx, 1);
+    else appState.state.blocked_nodes.push(nodeId);
   }
 
+  appState.ghostRoute = null;
   recomputeAndRender();
 }
 
-/**
- * Handles Edge Click or Context Menu
- */
 function handleEdgeClick(edgeId) {
+  pushUndoState();
   toggleEdgeHazard(edgeId);
+  triggerUndoToast(edgeId);
 }
 
 function handleEdgeContextMenu(edgeId) {
+  pushUndoState();
   toggleEdgeHazard(edgeId);
+  triggerUndoToast(edgeId);
 }
 
 function toggleEdgeHazard(edgeId) {
+  savePreviousRouteForDiff();
+
   const idx = appState.state.blocked_edges.indexOf(edgeId);
-  if (idx >= 0) {
-    appState.state.blocked_edges.splice(idx, 1);
-  } else {
-    appState.state.blocked_edges.push(edgeId);
-  }
+  if (idx >= 0) appState.state.blocked_edges.splice(idx, 1);
+  else appState.state.blocked_edges.push(edgeId);
+
+  appState.ghostRoute = null;
   recomputeAndRender();
 }
 
-/**
- * Removes individual hazard from side panel chips
- */
 function handleRemoveHazard(type, id) {
+  pushUndoState();
+  savePreviousRouteForDiff();
+
   if (type === "node") {
     const idx = appState.state.blocked_nodes.indexOf(id);
     if (idx >= 0) appState.state.blocked_nodes.splice(idx, 1);
@@ -422,20 +599,28 @@ function handleRemoveHazard(type, id) {
     if (idx >= 0) appState.state.closed_exits.splice(idx, 1);
   }
 
+  appState.ghostRoute = null;
   recomputeAndRender();
 }
 
-/**
- * Handles Reset button:
- * "Reset button restores the file's original initial_state (deep-copied on load)
- * and keeps the loaded graph. Keep the start selection unless the start becomes blocked."
- */
+function handleClearGroup(group) {
+  pushUndoState();
+  savePreviousRouteForDiff();
+
+  if (group === "nodes") appState.state.blocked_nodes = [];
+  else if (group === "edges") appState.state.blocked_edges = [];
+  else if (group === "exits") appState.state.closed_exits = [];
+
+  recomputeAndRender();
+}
+
 function handleReset() {
   if (!appState.originalInitialState) return;
 
+  pushUndoState();
+  savePreviousRouteForDiff();
   appState.state = deepClone(appState.originalInitialState);
 
-  // If start is blocked in original initial_state, reset start
   if (appState.state.blocked_nodes.includes(appState.currentStart)) {
     const candidate = appState.graph.nodes.find(
       (n) => n.type !== "exit" && !appState.state.blocked_nodes.includes(n.id)
@@ -443,15 +628,278 @@ function handleReset() {
     appState.currentStart = candidate ? candidate.id : null;
   }
 
-  stopWalkthrough();
+  appState.ghostRoute = null;
   recomputeAndRender();
 }
 
-/**
- * Recomputes route and updates SVG & Side Panel
- */
+function handleUnblockStart() {
+  if (!appState.currentStart) return;
+  pushUndoState();
+  savePreviousRouteForDiff();
+
+  const idx = appState.state.blocked_nodes.indexOf(appState.currentStart);
+  if (idx >= 0) {
+    appState.state.blocked_nodes.splice(idx, 1);
+  }
+
+  recomputeAndRender();
+}
+
+// Route Diff Calculation
+function savePreviousRouteForDiff() {
+  if (appState.routeResult && appState.routeResult.status === "ok") {
+    appState.diffRoute = [...appState.routeResult.path];
+    const prevCost = appState.routeResult.cost;
+
+    clearTimeout(appState.diffTimer);
+    appState.diffTimer = setTimeout(() => {
+      appState.diffRoute = null;
+      appState.costDeltaStr = null;
+      recomputeAndRender();
+    }, 1200);
+
+    appState._prevCostForDiff = prevCost;
+  }
+}
+
+// Hover Preview (In Hazard Mode: compute preview before click)
+function handleElementHover(info) {
+  if (!consoleTooltipEl) return;
+
+  if (!info) {
+    consoleTooltipEl.classList.remove("visible");
+    if (appState.ghostRoute) {
+      appState.ghostRoute = null;
+      recomputeAndRender();
+    }
+    return;
+  }
+
+  const rect = canvasViewport.getBoundingClientRect();
+  const x = info.evt.clientX - rect.left + 14;
+  const y = info.evt.clientY - rect.top + 14;
+
+  consoleTooltipEl.style.left = `${x}px`;
+  consoleTooltipEl.style.top = `${y}px`;
+
+  if (info.type === "node") {
+    consoleTooltipEl.innerHTML = `
+      <div class="tooltip-title-mono">${info.id} · ${escapeHtml(info.label)}</div>
+      <div class="tooltip-sub-mono">${t("tooltipType")}: ${info.nodeType.toUpperCase()}</div>
+      <div class="tooltip-sub-mono">${t("tooltipStatus")}: ${info.status}</div>
+    `;
+
+    // If in hazard mode, preview effect of toggling this node
+    if (appState.activeMode === "hazard" && appState.graph && appState.currentStart) {
+      computeGhostPreview("node", info.id, info.nodeType);
+    }
+  } else {
+    consoleTooltipEl.innerHTML = `
+      <div class="tooltip-title-mono">CORRIDOR ${info.id} (${info.label})</div>
+      <div class="tooltip-sub-mono">${t("tooltipCost")}: ${info.cost}</div>
+      <div class="tooltip-sub-mono">${t("tooltipStatus")}: ${info.status}</div>
+    `;
+
+    if (appState.activeMode === "hazard" && appState.graph && appState.currentStart) {
+      computeGhostPreview("edge", info.id);
+    }
+  }
+
+  consoleTooltipEl.classList.add("visible");
+}
+
+function computeGhostPreview(type, id, nodeType = "room") {
+  const previewState = deepClone(appState.state);
+
+  if (type === "node") {
+    if (nodeType === "exit") {
+      const idx = previewState.closed_exits.indexOf(id);
+      if (idx >= 0) previewState.closed_exits.splice(idx, 1);
+      else previewState.closed_exits.push(id);
+    } else {
+      const idx = previewState.blocked_nodes.indexOf(id);
+      if (idx >= 0) previewState.blocked_nodes.splice(idx, 1);
+      else previewState.blocked_nodes.push(id);
+    }
+  } else {
+    const idx = previewState.blocked_edges.indexOf(id);
+    if (idx >= 0) previewState.blocked_edges.splice(idx, 1);
+    else previewState.blocked_edges.push(id);
+  }
+
+  const previewRes = findEvacuationRoute(appState.graph, appState.currentStart, previewState);
+  if (previewRes && previewRes.status === "ok") {
+    appState.ghostRoute = previewRes.path;
+    recomputeAndRender();
+  }
+}
+
+// Undo Stack & Toast
+function pushUndoState() {
+  appState.undoStack.push(deepClone(appState.state));
+  if (appState.undoStack.length > 20) appState.undoStack.shift();
+}
+
+function handleUndo() {
+  if (appState.undoStack.length === 0) return;
+  savePreviousRouteForDiff();
+  appState.state = appState.undoStack.pop();
+  if (consoleToastEl) consoleToastEl.classList.remove("visible");
+  recomputeAndRender();
+}
+
+function triggerUndoToast(targetId) {
+  if (!consoleToastEl || !toastMsgEl) return;
+  toastMsgEl.textContent = t("undoToastMsg", { id: targetId });
+  consoleToastEl.classList.add("visible");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    consoleToastEl.classList.remove("visible");
+  }, 4000);
+}
+
+// Command Palette System (Ctrl+K)
+function openCommandPalette() {
+  if (!commandPaletteEl || !paletteInputEl) return;
+  commandPaletteEl.classList.add("visible");
+  paletteInputEl.value = "";
+  paletteInputEl.focus();
+  renderPaletteResults("");
+}
+
+function closeCommandPalette() {
+  if (commandPaletteEl) commandPaletteEl.classList.remove("visible");
+}
+
+function handlePaletteSearch(e) {
+  renderPaletteResults(e.target.value.trim().toLowerCase());
+}
+
+function handlePaletteKeydown(e) {
+  const items = paletteResultsListEl.querySelectorAll(".palette-item");
+  let selectedIdx = Array.from(items).findIndex((el) => el.classList.contains("selected"));
+
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    if (items.length === 0) return;
+    if (selectedIdx >= 0) items[selectedIdx].classList.remove("selected");
+    selectedIdx = (selectedIdx + 1) % items.length;
+    items[selectedIdx].classList.add("selected");
+    items[selectedIdx].scrollIntoView({ block: "nearest" });
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    if (items.length === 0) return;
+    if (selectedIdx >= 0) items[selectedIdx].classList.remove("selected");
+    selectedIdx = (selectedIdx - 1 + items.length) % items.length;
+    items[selectedIdx].classList.add("selected");
+    items[selectedIdx].scrollIntoView({ block: "nearest" });
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    if (selectedIdx >= 0 && items[selectedIdx]) {
+      items[selectedIdx].click();
+    }
+  }
+}
+
+function renderPaletteResults(query) {
+  if (!paletteResultsListEl || !appState.graph) return;
+
+  const results = [];
+
+  // Match nodes
+  appState.graph.nodes.forEach((n) => {
+    if (!query || n.id.toLowerCase().includes(query) || n.label.toLowerCase().includes(query)) {
+      results.push({
+        type: "node",
+        id: n.id,
+        label: n.label,
+        sub: n.type.toUpperCase()
+      });
+    }
+  });
+
+  // Match edges
+  appState.graph.edges.forEach((e) => {
+    if (!query || e.id.toLowerCase().includes(query) || e.from.toLowerCase().includes(query) || e.to.toLowerCase().includes(query)) {
+      results.push({
+        type: "edge",
+        id: e.id,
+        label: `${e.from} ↔ ${e.to} (Cost ${e.cost})`,
+        sub: "CORRIDOR"
+      });
+    }
+  });
+
+  // Action commands
+  if (!query || "reset".includes(query)) {
+    results.push({ type: "action", id: "reset", label: "Reset Hazards to Initial State", sub: "ACTION" });
+  }
+  if (!query || "theme".includes(query)) {
+    results.push({ type: "action", id: "theme", label: "Toggle Night/Day Shift Theme", sub: "ACTION" });
+  }
+
+  paletteResultsListEl.innerHTML = results
+    .slice(0, 10)
+    .map(
+      (item, idx) => `
+    <li class="palette-item ${idx === 0 ? "selected" : ""}" data-type="${item.type}" data-id="${item.id}">
+      <div class="palette-item-left">
+        <span class="mono" style="font-weight: 600;">${item.id}</span>
+        <span>${escapeHtml(item.label)}</span>
+      </div>
+      <span class="palette-item-badge">${item.sub}</span>
+    </li>
+  `
+    )
+    .join("");
+
+  paletteResultsListEl.querySelectorAll(".palette-item").forEach((li) => {
+    li.addEventListener("click", () => {
+      const type = li.getAttribute("data-type");
+      const id = li.getAttribute("data-id");
+
+      if (type === "action") {
+        if (id === "reset") handleReset();
+        else if (id === "theme") toggleTheme();
+      } else if (type === "node") {
+        if (appState.activeMode === "select") {
+          const node = appState.graph.nodes.find((n) => n.id === id);
+          if (node && node.type !== "exit") {
+            appState.currentStart = id;
+            recomputeAndRender();
+          }
+        } else {
+          const node = appState.graph.nodes.find((n) => n.id === id);
+          if (node) toggleNodeHazard(id, node.type);
+        }
+      } else if (type === "edge") {
+        toggleEdgeHazard(id);
+      }
+
+      closeCommandPalette();
+    });
+  });
+}
+
+function checkFirstRunCoach() {
+  try {
+    const dismissed = localStorage.getItem("coach_dismissed");
+    if (!dismissed && coachMarksBarEl) {
+      coachMarksBarEl.classList.add("visible");
+    }
+  } catch (_) {}
+}
+
+function handleTransitHover(segment) {
+  appState.highlightedSegment = segment;
+  recomputeAndRender();
+}
+
 function recomputeAndRender() {
-  if (!appState.graph) return;
+  if (!appState.graph) {
+    if (emptyFrameEl) emptyFrameEl.classList.add("visible");
+    return;
+  }
 
   // Calculate route
   appState.routeResult = findEvacuationRoute(
@@ -460,112 +908,86 @@ function recomputeAndRender() {
     appState.state
   );
 
+  // Compute Cost Delta if in diff mode
+  if (appState._prevCostForDiff !== undefined && appState.routeResult.status === "ok") {
+    const prev = appState._prevCostForDiff;
+    const cur = appState.routeResult.cost;
+    const diff = cur - prev;
+    const sign = diff >= 0 ? `+${diff}` : `${diff}`;
+    appState.costDeltaStr = `${prev} → ${cur} (${sign})`;
+    delete appState._prevCostForDiff;
+  }
+
+  // Update System Armed Indicator Dot
+  if (systemDotEl && systemStatusTextEl) {
+    if (!appState.currentStart) {
+      systemDotEl.className = "system-dot";
+      systemStatusTextEl.textContent = t("systemArmed");
+    } else if (appState.routeResult.status === "start_blocked") {
+      systemDotEl.className = "system-dot dot-amber";
+      systemStatusTextEl.textContent = t("systemWarning");
+    } else if (appState.routeResult.status === "no_route") {
+      systemDotEl.className = "system-dot dot-hazard";
+      systemStatusTextEl.textContent = t("systemDisarmed");
+    } else {
+      systemDotEl.className = "system-dot";
+      systemStatusTextEl.textContent = t("systemArmed");
+    }
+  }
+
+  // Failure State Canvas Overlays
+  if (failureOverlayEl && failTitleEl && failDescEl && btnFailActionEl) {
+    if (appState.routeResult && appState.routeResult.status === "no_route") {
+      failureOverlayEl.className = "canvas-failure-overlay visible fail-hazard";
+      failTitleEl.textContent = t("failureNoRouteTitle");
+      failDescEl.textContent = t("failureNoRouteDesc");
+      btnFailActionEl.style.display = "none";
+    } else if (appState.routeResult && appState.routeResult.status === "start_blocked") {
+      failureOverlayEl.className = "canvas-failure-overlay visible fail-amber";
+      failTitleEl.textContent = t("failureStartBlockedTitle");
+      failDescEl.textContent = t("failureStartBlockedDesc");
+      btnFailActionEl.textContent = t("unblockStartAction");
+      btnFailActionEl.style.display = "inline-flex";
+    } else {
+      failureOverlayEl.classList.remove("visible");
+    }
+  }
+
   // Render SVG Graph
-  renderGraph(svgMap, {
+  renderGraph(svgCanvas, {
     graph: appState.graph,
     state: appState.state,
     startId: appState.currentStart,
     routeResult: appState.routeResult,
-    walkthroughIndex: appState.walkthrough.active ? appState.walkthrough.index : -1,
+    ghostRoute: appState.ghostRoute,
+    diffRoute: appState.diffRoute,
+    highlightedSegment: appState.highlightedSegment,
+    zoomTransform: appState.zoom,
     onNodeClick: handleNodeClick,
     onEdgeClick: handleEdgeClick,
     onNodeContextMenu: handleNodeContextMenu,
-    onEdgeContextMenu: handleEdgeContextMenu
+    onEdgeContextMenu: handleEdgeContextMenu,
+    onElementHover: handleElementHover
   });
 
-  // Render Side Panel
-  renderSidePanel(sidePanelEl, {
+  // Render Operations Inspector & Bottom Terminal Console
+  renderInspector(controlInspectorEl, statusConsoleEl, {
     graph: appState.graph,
     state: appState.state,
     startId: appState.currentStart,
     routeResult: appState.routeResult,
-    onRemoveHazard: handleRemoveHazard
+    activeMode: appState.activeMode,
+    costDelta: appState.costDeltaStr,
+    onModeChange: setInteractionMode,
+    onRemoveHazard: handleRemoveHazard,
+    onClearGroup: handleClearGroup,
+    onTransitHover: handleTransitHover,
+    onUnblockStart: handleUnblockStart
   });
 
-  updateWalkthroughUI();
   saveStateToStorage();
 }
 
-/**
- * Walkthrough System
- */
-function updateWalkthroughUI() {
-  if (!walkthroughBarEl) return;
-
-  const isOk = appState.routeResult && appState.routeResult.status === "ok";
-  if (!isOk) {
-    stopWalkthrough();
-    walkthroughBarEl.classList.remove("visible");
-    return;
-  }
-
-  walkthroughBarEl.classList.add("visible");
-  const path = appState.routeResult.path;
-  const currentStep = appState.walkthrough.index + 1;
-  const totalSteps = path.length;
-  const currentNode = path[appState.walkthrough.index] || path[0];
-
-  const infoEl = document.getElementById("wtInfo");
-  if (infoEl) {
-    infoEl.textContent = t("walkthroughStep", {
-      current: currentStep,
-      total: totalSteps,
-      node: currentNode
-    });
-  }
-
-  const wtPlay = document.getElementById("wtPlay");
-  if (wtPlay) {
-    wtPlay.textContent = appState.walkthrough.timer ? t("walkthroughPause") : t("walkthroughPlay");
-  }
-}
-
-function stepWalkthrough(delta) {
-  if (!appState.routeResult || appState.routeResult.status !== "ok") return;
-  const path = appState.routeResult.path;
-  appState.walkthrough.active = true;
-
-  let newIdx = appState.walkthrough.index + delta;
-  if (newIdx < 0) newIdx = 0;
-  if (newIdx >= path.length) newIdx = path.length - 1;
-
-  appState.walkthrough.index = newIdx;
-  recomputeAndRender();
-}
-
-function toggleWalkthroughPlay() {
-  if (appState.walkthrough.timer) {
-    clearInterval(appState.walkthrough.timer);
-    appState.walkthrough.timer = null;
-    updateWalkthroughUI();
-  } else {
-    appState.walkthrough.active = true;
-    appState.walkthrough.timer = setInterval(() => {
-      const path = appState.routeResult ? appState.routeResult.path : [];
-      if (appState.walkthrough.index >= path.length - 1) {
-        clearInterval(appState.walkthrough.timer);
-        appState.walkthrough.timer = null;
-        updateWalkthroughUI();
-      } else {
-        stepWalkthrough(1);
-      }
-    }, 700);
-    updateWalkthroughUI();
-  }
-}
-
-function stopWalkthrough() {
-  if (appState.walkthrough.timer) {
-    clearInterval(appState.walkthrough.timer);
-    appState.walkthrough.timer = null;
-  }
-  appState.walkthrough.active = false;
-  appState.walkthrough.index = 0;
-}
-
-/**
- * LocalStorage save & restore (safely wrapped in try/catch)
- */
 function saveStateToStorage() {
   try {
     const payload = {
@@ -574,12 +996,10 @@ function saveStateToStorage() {
       currentStart: appState.currentStart,
       state: appState.state,
       lang: getLanguage(),
-      highContrast: appState.highContrast
+      theme: appState.theme
     };
     localStorage.setItem("smart_escape_save", JSON.stringify(payload));
-  } catch (err) {
-    // Storage quota or security policy
-  }
+  } catch (_) {}
 }
 
 function loadSavedState() {
@@ -592,67 +1012,56 @@ function loadSavedState() {
       appState.originalInitialState = parsed.originalInitialState || parsed.graph.initial_state;
       appState.currentStart = parsed.currentStart;
       appState.state = parsed.state || parsed.graph.initial_state;
+
       if (parsed.lang) {
-        setLanguage(parsed.lang);
-        const btnLangToggle = document.getElementById("btnLangToggle");
-        if (btnLangToggle) btnLangToggle.textContent = parsed.lang === "en" ? "বাংলা" : "English";
+        setAppLanguage(parsed.lang);
       }
-      if (parsed.highContrast) {
-        appState.highContrast = true;
-        document.body.classList.add("high-contrast");
-        const btnThemeToggle = document.getElementById("btnThemeToggle");
-        if (btnThemeToggle) btnThemeToggle.textContent = t("themeToggleActive");
+      if (parsed.theme) {
+        appState.theme = parsed.theme;
+        document.documentElement.setAttribute("data-theme", appState.theme);
+        const themeText = document.getElementById("themeToggleText");
+        if (themeText) {
+          themeText.textContent = appState.theme === "dark" ? t("themeToggleDark") : t("themeToggleLight");
+        }
+      }
+
+      const headerFacilityName = document.getElementById("headerFacilityName");
+      if (headerFacilityName && appState.graph.building) {
+        headerFacilityName.textContent = appState.graph.building;
       }
     }
-  } catch (err) {
-    console.warn("Failed to load state from localStorage:", err);
-  }
+  } catch (_) {}
 }
 
-/**
- * Exports SVG Map to PNG via Canvas
- */
 function exportMapAsPng() {
-  if (!svgMap) return;
+  if (!svgCanvas) return;
 
-  const svgData = new XMLSerializer().serializeToString(svgMap);
+  const svgData = new XMLSerializer().serializeToString(svgCanvas);
   const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
   const url = URL.createObjectURL(svgBlob);
 
   const img = new Image();
   img.onload = () => {
     const canvas = document.createElement("canvas");
-    canvas.width = 1600;
-    canvas.height = 1000;
+    canvas.width = 1920;
+    canvas.height = 1080;
     const ctx = canvas.getContext("2d");
 
-    // Background fill
-    ctx.fillStyle = appState.highContrast ? "#000000" : "#ffffff";
+    ctx.fillStyle = appState.theme === "dark" ? "#111410" : "#F1EDE2";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     URL.revokeObjectURL(url);
 
-    // Trigger download
+    const slug = (appState.graph?.building || "egress-map").toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const a = document.createElement("a");
-    a.download = "smart-escape-route.png";
+    a.download = `smart-escape-${slug}.png`;
     a.href = canvas.toDataURL("image/png");
     a.click();
   };
   img.src = url;
 }
 
-function escapeHtml(str) {
-  if (typeof str !== "string") return String(str);
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-// Auto-run on DOMContentLoaded
 if (typeof document !== "undefined") {
   document.addEventListener("DOMContentLoaded", initApp);
 }
